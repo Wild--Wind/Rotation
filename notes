@@ -1,0 +1,45 @@
+widom_mask.py requires 5 arguments: -i <inputfolder> -o <outputfolder> -u <upper_mfi_min> -m <min_MFI> -f <max_fraction>
+
+inputfolder     =   a folder of luminex raw output files.
+                    all files in the folder will be fed into the masking program.
+                    non-luminex files should not be inside the folder.
+                    ignores subfolders
+                    expects luminex files to be .csv.
+                            can handle the strange changes made to the .csv files when opened in excel
+                            ie empty lines = ',,,,,,' and items in lines have surrounding ""
+
+outputfolder    =   name of a folder where the masked output will be written
+                    if the folder does not exist, it will be created
+                    output files will be .csv
+                    output files will have same root name as their corresponding unmasked file
+                    suffix added: _masked_<min_mfi>_<max_fraction>
+
+upper_mfi_min   =   must be a positive, nonzero number
+                    this is the upper minimum for MFI's, under which flag MFI's to be checked at a later date
+                    if an MFI value is above min_MFI but below upper_mfi_min, they will be written
+                    to a tab delim file with lines = 'Location	Sample	snp1	snp2	snp3'
+                    the files will be output to a below_upper_limit folder in the specified output folder
+
+min_MFI         =   must be a positive, nonzero number
+                    if allele_1 >= min_MFI or allele_2 >= min_MFI, the snp will not be masked
+                    else both alleles will be masked.
+                    (also, if allele_1 == -1 or allele_2 == -1, both alleles will be masked)
+                    being masked means having the value changed to -1
+
+max_fraction    =   must be a positive, nonzero number < 1.0
+                    if the fraction of total -1 values in a row (sample) or column (snp) is greater than max_fraction
+                    the entire row or column will be masked
+
+The masking process begins by masking SNPs per sample.
+
+    # three passes of masking occur:
+    # 1. mask individual snp values in each sample (mask = -1) -- collect list of snps per sample
+    #    that are above the mfi_cutoff but below the upper_min.
+    # 2. mask entire snps if > fraction_cutoff of the snp are -1. this is done in a diff dictionary organized by snp
+    #    instead of sample, so before moving on to next step update the sample based dict
+    #    if an entire snp is masked, remove any instances of that snp from the list
+    #    that are above the mfi_cutoff but below the upper_min.
+    # 3. mask entire sample if > fraction_cutoff of the sample are -1. this is the final dictionary.
+    #    if an entire sample is masked, remove any instances of that sample from the list
+    #    that are above the mfi_cutoff but below the upper_min
+    # write the output file based on this dictionary and program_info.
